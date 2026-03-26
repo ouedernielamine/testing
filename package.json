@@ -29,7 +29,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.7.0",
     "mammoth": "^1.12.0",
-    "next": "^15.3.5",
+    "next": "^16.2.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.5.207",
     "prisma": "^5.22.0",
