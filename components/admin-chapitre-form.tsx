@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { TestType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,7 +137,7 @@ export function AdminChapitreForm({ initial }: { initial?: ChapitreInitial }) {
   const [step, setStep] = useState(1);
 
   /* ─── Form state ─── */
-  const [numero, setNumero] = useState(initial?.numero ?? 1);
+  const [numero, setNumero] = useState(initial?.numero ?? 0);
   const [titre, setTitre] = useState(initial?.titre ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [fileUrl, setFileUrl] = useState(initial?.fileUrl ?? "");
@@ -157,6 +157,19 @@ export function AdminChapitreForm({ initial }: { initial?: ChapitreInitial }) {
 
   /* ─── UI state ─── */
   const [saving, setSaving] = useState(false);
+
+  // Auto-fetch next numero for new chapitres
+  useEffect(() => {
+    if (!initial) {
+      fetch("/api/chapitres")
+        .then((r) => r.json())
+        .then((chapitres: { numero: number }[]) => {
+          const max = chapitres.reduce((m, c) => Math.max(m, c.numero), 0);
+          setNumero(max + 1);
+        })
+        .catch(() => setNumero(1));
+    }
+  }, [initial]);
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
@@ -386,10 +399,13 @@ export function AdminChapitreForm({ initial }: { initial?: ChapitreInitial }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Erreur serveur");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Erreur serveur");
+      }
       setStatus({ type: "success", message: "Chapitre enregistré !" });
-    } catch {
-      setStatus({ type: "error", message: "Erreur lors de l'enregistrement." });
+    } catch (e: any) {
+      setStatus({ type: "error", message: e?.message || "Erreur lors de l'enregistrement." });
     } finally {
       setSaving(false);
     }

@@ -15,9 +15,15 @@ export async function GET() {
 export async function POST(req: Request) {
   const body = await req.json();
 
-  const chapitre = await db.chapitre.create({
-    data: {
-      numero: body.numero,
+  // Auto-assign next numero if not provided or conflicts
+  const last = await db.chapitre.findFirst({ orderBy: { numero: "desc" }, select: { numero: true } });
+  const nextNumero = (last?.numero ?? 0) + 1;
+  const numero = body.numero ?? nextNumero;
+
+  try {
+    const chapitre = await db.chapitre.create({
+      data: {
+        numero,
       titre: body.titre,
       description: body.description,
       fileUrl: body.fileUrl,
@@ -54,5 +60,14 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(chapitre, { status: 201 });
+    return NextResponse.json(chapitre, { status: 201 });
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { error: `Le numéro de chapitre ${numero} existe déjà. Veuillez en choisir un autre.` },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 }
